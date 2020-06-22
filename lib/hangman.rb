@@ -11,16 +11,16 @@ class Game
   end
 
   def start_game
-    word_guess = copy_word_empty
+    word_guess = new_array(dict_word)
     guesses_left = guesses_limit
     loss = false
     win = false
 
     until loss || win
-      player_letter = player.get_letter
+      player_letter = player.letter
 
       if dict_word.include?(player_letter) && !word_guess.include?(player_letter)
-        get_letter_matches(word_guess, player_letter)
+        check_letter_match(word_guess, player_letter)
       else
         guesses_left = decrease_guesses_left(guesses_left)
       end
@@ -31,13 +31,15 @@ class Game
       win = true if check_win(word_guess)
     end
 
-    if loss
-      puts "The word to guess was #{dict_word}"
-    end
+    puts loss_message(dict_word) if loss
+  end
+
+  def loss_message(word)
+    "The word to guess was #{word.join}"
   end
 
   def check_loss(guesses_left)
-    guesses_left == 0
+    guesses_left.zero?
   end
 
   def check_win(guess)
@@ -48,20 +50,20 @@ class Game
     guesses_left - 1
   end
 
-  def get_letter_matches(guess_word, player_letter)
+  def check_letter_match(guess_word, player_letter)
     dict_word.each_with_index do |letter, index|
-      if player_letter == letter && guess_word[index] == "_"
-        add_correct_letter(guess_word, player_letter, index)
-      end
+      next unless player_letter == letter && guess_word[index] == "_"
+
+      add_letter(guess_word, player_letter, index)
     end
   end
 
-  def add_correct_letter(guess_word, letter, index)
+  def add_letter(guess_word, letter, index)
     guess_word[index] = letter
   end
 
-  def copy_word_empty
-    Array.new(dict_word.length, "_")
+  def new_array(model_word)
+    Array.new(model_word.length, "_")
   end
 
   def give_feedback(word, guesses_left)
@@ -97,21 +99,19 @@ class Dictionary
 end
 
 class Player
-  def initialize
+  def initialize; end
 
-  end
-
-  def get_input
+  def input
     gets.chomp.downcase
   end
 
-  def prompt_enter_guess
-    "Enter your guess of a letter: "
+  def prompt_guess
+    "\nEnter your guess of a letter: "
   end
 
-  def get_letter
-    print prompt_enter_guess
-    get_input
+  def letter
+    print prompt_guess
+    input
   end
 end
 
