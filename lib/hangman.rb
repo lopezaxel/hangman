@@ -8,39 +8,56 @@ class Game
     @player = player
     @dict_word = dictionary.word.split("")
     @guesses_limit = 12
-    @loss = false
   end
 
   def start_game
     word_guess = copy_word_empty
     guesses_left = guesses_limit
+    loss = false
+    win = false
 
-    until loss
-      print player.prompt_enter_guess
-      player_letter = player.get_player_input
+    until loss || win
+      player_letter = player.get_letter
 
-      get_letter_matches(word_guess, player_letter)
-      guesses_left -= 1 unless dict_word.include?(player_letter)
+      if dict_word.include?(player_letter) && !word_guess.include?(player_letter)
+        get_letter_matches(word_guess, player_letter)
+      else
+        guesses_left = decrease_guesses_left(guesses_left)
+      end
 
       give_feedback(word_guess, guesses_left)
+
+      loss = true if check_loss(guesses_left)
+      win = true if check_win(word_guess)
     end
+
+    if loss
+      puts "The word to guess was #{dict_word}"
+    end
+  end
+
+  def check_loss(guesses_left)
+    guesses_left == 0
+  end
+
+  def check_win(guess)
+    guess.none? { |letter| letter == "_" }
+  end
+
+  def decrease_guesses_left(guesses_left)
+    guesses_left - 1
   end
 
   def get_letter_matches(guess_word, player_letter)
     dict_word.each_with_index do |letter, index|
-      if player_letter == letter
+      if player_letter == letter && guess_word[index] == "_"
         add_correct_letter(guess_word, player_letter, index)
-        remove_letter_dict(index)
       end
     end
   end
 
   def add_correct_letter(guess_word, letter, index)
     guess_word[index] = letter
-  end
-
-  def remove_letter_dict(index)
-    dict_word[index] = ""
   end
 
   def copy_word_empty
@@ -84,12 +101,17 @@ class Player
 
   end
 
-  def get_player_input
+  def get_input
     gets.chomp.downcase
   end
 
   def prompt_enter_guess
     "Enter your guess of a letter: "
+  end
+
+  def get_letter
+    print prompt_enter_guess
+    get_input
   end
 end
 
