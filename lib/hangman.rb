@@ -2,10 +2,8 @@ require "pry"
 require "json"
 
 module Serializer
-  @@filename = "saved_game.json"
-
-  def to_json(word_guess, guesses_left)
-    file = File.open(@@filename, "w")
+  def to_json(file, word_guess, guesses_left)
+    file = File.open(file, "w")
     data = JSON.dump({
       :word_guess => word_guess,
       :guesses_left => guesses_left,
@@ -15,7 +13,7 @@ module Serializer
     file.close
   end
 
-  def from_json
+  def from_json(file)
     file = File.open(@@filename, "r")
     contents = file.read
     file.close
@@ -26,10 +24,9 @@ end
 class Game
   include Serializer
 
-  attr_reader :dictionary, :player
+  attr_reader :player
   attr_accessor :dict_word, :word_guess, :guesses_left
   def initialize(dictionary, player)
-    @dictionary = dictionary
     @player = player
     @dict_word = dictionary.word.split("")
     @guesses_left = 12
@@ -50,7 +47,7 @@ class Game
       if letter_correct(player_input, dict_word, word_guess) && player_input.size == 1
         check_letter_match(word_guess, player_input)
       elsif player_input == "save"
-        to_json(word_guess, guesses_left)
+        save_game
       else
         subtract_guesses
       end
@@ -64,8 +61,27 @@ class Game
     puts loss_message(dict_word) if loss
   end
 
+  def save_game
+    num = 1
+    folder = create_folder("games")
+    file = create_file(folder, num)
+    file = create_file(folder, num += 1) while File.exists?(file)
+    to_json(file, word_guess, guesses_left)
+  end
+
+  def create_folder(foldername)
+    Dir.mkdir(foldername) unless File.exists?(foldername)
+    foldername
+  end
+
+  def create_file(foldername, num = 1)
+    "#{foldername}/game_#{num}.json"
+  end
+
   def load_saved_game
-    saved_data = from_json
+    p Dir.glob("games/*")
+
+    saved_data = from_json()
 
     self.dict_word = saved_data["dict_word"]
     self.word_guess = saved_data["word_guess"]
