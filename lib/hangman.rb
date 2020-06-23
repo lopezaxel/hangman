@@ -26,42 +26,33 @@ end
 class Game
   include Serializer
 
-  attr_reader :dictionary, :player, :dict_word, :guesses_limit
-  attr_accessor :loss
+  attr_reader :dictionary, :player
+  attr_accessor :dict_word, :word_guess, :guesses_left
   def initialize(dictionary, player)
     @dictionary = dictionary
     @player = player
     @dict_word = dictionary.word.split("")
-    @guesses_limit = 12
+    @guesses_left = 12
+    @word_guess = new_array(dict_word)
   end
 
   def start_game
-    word_guess = new_array(dict_word)
-    guesses_left = guesses_limit
     loss = false
     win = false
 
-    if player.load_game == "load"
-      saved_data = from_json
-
-      @dict_word = saved_data["dict_word"]
-      word_guess = saved_data["word_guess"]
-      guesses_left = saved_data["guesses_left"]
-
-      give_feedback(word_guess, guesses_left)
-    end
+    load_saved_game if player.ask_load_game == "load"
 
     until loss || win
       puts player.ask_save_game
       print player.ask_guess
       player_input = player.input
 
-      if letter_correct(player_input, dict_word, word_guess) && player_input.length == 1
+      if letter_correct(player_input, dict_word, word_guess) && player_input.size == 1
         check_letter_match(word_guess, player_input)
       elsif player_input == "save"
         to_json(word_guess, guesses_left)
       else
-        guesses_left = decrease_guesses_left(guesses_left)
+        subtract_guesses
       end
 
       give_feedback(word_guess, guesses_left)
@@ -75,10 +66,16 @@ class Game
 
   def load_saved_game
     saved_data = from_json
-    p saved_data
-    @dict_word = saved_data["dict_word"]
-    word_guess = saved_data["word_guess"]
-    guesses_left = saved_data["guesses_left"]
+
+    self.dict_word = saved_data["dict_word"]
+    self.word_guess = saved_data["word_guess"]
+    self.guesses_left = saved_data["guesses_left"]
+
+    give_feedback(word_guess, guesses_left)
+  end
+
+  def subtract_guesses
+    self.guesses_left -= 1
   end
 
   def letter_correct(letter, word, word2)
@@ -95,10 +92,6 @@ class Game
 
   def check_win(guess)
     guess.none? { |letter| letter == "_" }
-  end
-
-  def decrease_guesses_left(guesses_left)
-    guesses_left - 1
   end
 
   def check_letter_match(guess_word, player_letter)
@@ -118,7 +111,7 @@ class Game
   end
 
   def give_feedback(word, guesses_left)
-    puts "Correct guesses #{word.join(" ")}"
+    puts "\nCorrect guesses #{word.join(" ")}"
     puts "Incorrect guesses left #{guesses_left}\n"
   end
 end
@@ -162,8 +155,8 @@ class Player
     "\nType 'save' to save the game"
   end
 
-  def load_game
-    print "Type 'yes' to load the last saved game: "
+  def ask_load_game
+    print "Type 'load' to load the last saved game: "
     gets.chomp.downcase
   end
 end
