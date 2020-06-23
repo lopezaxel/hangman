@@ -1,7 +1,31 @@
 require "pry"
 require "json"
 
+module Serializer
+  @@filename = "saved_game.json"
+
+  def to_json(word_guess, guesses_left)
+    file = File.open(@@filename, "w")
+    data = JSON.dump({
+      :word_guess => word_guess,
+      :guesses_left => guesses_left,
+      :dict_word => @dict_word
+      })
+    file.write(data)
+    file.close
+  end
+
+  def from_json
+    file = File.open(@@filename, "r")
+    contents = file.read
+    file.close
+    JSON.load(contents)
+  end
+end
+
 class Game
+  include Serializer
+
   attr_reader :dictionary, :player, :dict_word, :guesses_limit
   attr_accessor :loss
   def initialize(dictionary, player)
@@ -17,15 +41,25 @@ class Game
     loss = false
     win = false
 
+    if player.load_game == "load"
+      saved_data = from_json
+
+      @dict_word = saved_data["dict_word"]
+      word_guess = saved_data["word_guess"]
+      guesses_left = saved_data["guesses_left"]
+
+      give_feedback(word_guess, guesses_left)
+    end
+
     until loss || win
       puts player.ask_save_game
       print player.ask_guess
       player_input = player.input
 
-      if letter_correct(player_input, dict_word, word_guess)
+      if letter_correct(player_input, dict_word, word_guess) && player_input.length == 1
         check_letter_match(word_guess, player_input)
       elsif player_input == "save"
-        to_json(word_guess)
+        to_json(word_guess, guesses_left)
       else
         guesses_left = decrease_guesses_left(guesses_left)
       end
@@ -39,14 +73,12 @@ class Game
     puts loss_message(dict_word) if loss
   end
 
-  def to_json(word)
-    filename = "data.json"
-    file = File.open(filename, "w")
-    data = JSON.dump({
-      :word => word
-      })
-    file.write(data)
-    file.close
+  def load_saved_game
+    saved_data = from_json
+    p saved_data
+    @dict_word = saved_data["dict_word"]
+    word_guess = saved_data["word_guess"]
+    guesses_left = saved_data["guesses_left"]
   end
 
   def letter_correct(letter, word, word2)
@@ -86,12 +118,8 @@ class Game
   end
 
   def give_feedback(word, guesses_left)
-    puts "Correct guesses #{join_word(word)}"
+    puts "Correct guesses #{word.join(" ")}"
     puts "Incorrect guesses left #{guesses_left}\n"
-  end
-
-  def join_word(word)
-    word.join(" ")
   end
 end
 
@@ -132,6 +160,11 @@ class Player
 
   def ask_save_game
     "\nType 'save' to save the game"
+  end
+
+  def load_game
+    print "Type 'yes' to load the last saved game: "
+    gets.chomp.downcase
   end
 end
 
