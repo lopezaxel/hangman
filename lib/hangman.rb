@@ -1,4 +1,5 @@
 require "pry"
+require "json"
 
 class Game
   attr_reader :dictionary, :player, :dict_word, :guesses_limit
@@ -17,10 +18,14 @@ class Game
     win = false
 
     until loss || win
-      player_letter = player.letter
+      puts player.ask_save_game
+      print player.ask_guess
+      player_input = player.input
 
-      if dict_word.include?(player_letter) && !word_guess.include?(player_letter)
-        check_letter_match(word_guess, player_letter)
+      if letter_correct(player_input, dict_word, word_guess)
+        check_letter_match(word_guess, player_input)
+      elsif player_input == "save"
+        to_json(word_guess)
       else
         guesses_left = decrease_guesses_left(guesses_left)
       end
@@ -32,6 +37,20 @@ class Game
     end
 
     puts loss_message(dict_word) if loss
+  end
+
+  def to_json(word)
+    filename = "data.json"
+    file = File.open(filename, "w")
+    data = JSON.dump({
+      :word => word
+      })
+    file.write(data)
+    file.close
+  end
+
+  def letter_correct(letter, word, word2)
+    word.include?(letter) && !word2.include?(letter)
   end
 
   def loss_message(word)
@@ -78,13 +97,15 @@ end
 
 class Dictionary
   attr_reader :dictionary, :word
+
+  @@dict_name = "dictionary.txt"
   def initialize
-    @dictionary = load_dictionary
+    @dictionary = load_dictionary(@@dict_name)
     @word = select_random_word
   end
 
-  def load_dictionary
-    File.open("dictionary.txt", "r").readlines
+  def load_dictionary(filename)
+    File.open(filename, "r").readlines
   end
 
   def select_random_word
@@ -105,13 +126,12 @@ class Player
     gets.chomp.downcase
   end
 
-  def prompt_guess
-    "\nEnter your guess of a letter: "
+  def ask_guess
+    "Enter your guess of a letter: "
   end
 
-  def letter
-    print prompt_guess
-    input
+  def ask_save_game
+    "\nType 'save' to save the game"
   end
 end
 
