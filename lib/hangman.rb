@@ -14,7 +14,7 @@ module Serializer
   end
 
   def from_json(file)
-    file = File.open(@@filename, "r")
+    file = File.open(file, "r")
     contents = file.read
     file.close
     JSON.load(contents)
@@ -79,12 +79,22 @@ class Game
   end
 
   def load_saved_game
-    p Dir.glob("games/*")
+    files = Dir.glob("games/*")
 
-    saved_data = from_json()
+    puts "Enter file number to load"
+    files.each_with_index do |file, index|
+      saved_data = from_json(file)
+      word = saved_data["word_guess"].join(" ")
+      puts "#{index} --> #{word}"
+    end
 
-    self.dict_word = saved_data["dict_word"]
+    input_number = gets.chomp
+    file = files[input_number.to_i]
+
+    saved_data = from_json(file)
+
     self.word_guess = saved_data["word_guess"]
+    self.dict_word = saved_data["dict_word"]
     self.guesses_left = saved_data["guesses_left"]
 
     give_feedback(word_guess, guesses_left)
@@ -99,7 +109,7 @@ class Game
   end
 
   def loss_message(word)
-    "The word to guess was #{word.join}"
+    "\nThe word to guess was #{word.join}"
   end
 
   def check_loss(guesses_left)
