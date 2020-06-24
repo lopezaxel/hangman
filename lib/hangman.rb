@@ -2,7 +2,7 @@ require "pry"
 require "json"
 
 module Serializer
-  def to_json(file, word_guess, guesses_left)
+  def save_json_file(file, word_guess, guesses_left)
     file = File.open(file, "w")
     data = JSON.dump({
       :word_guess => word_guess,
@@ -13,7 +13,7 @@ module Serializer
     file.close
   end
 
-  def from_json(file)
+  def load_json_file(file)
     file = File.open(file, "r")
     contents = file.read
     file.close
@@ -66,7 +66,7 @@ class Game
     folder = create_folder("games")
     file = create_file(folder, num)
     file = create_file(folder, num += 1) while File.exists?(file)
-    to_json(file, word_guess, guesses_left)
+    save_json_file(file, word_guess, guesses_left)
   end
 
   def create_folder(foldername)
@@ -79,25 +79,44 @@ class Game
   end
 
   def load_saved_game
-    files = Dir.glob("games/*")
-
-    puts "Enter file number to load"
-    files.each_with_index do |file, index|
-      saved_data = from_json(file)
-      word = saved_data["word_guess"].join(" ")
-      puts "#{index} --> #{word}"
-    end
-
-    input_number = gets.chomp
-    file = files[input_number.to_i]
-
-    saved_data = from_json(file)
+    saved_data = load_game_file
 
     self.word_guess = saved_data["word_guess"]
     self.dict_word = saved_data["dict_word"]
     self.guesses_left = saved_data["guesses_left"]
 
     give_feedback(word_guess, guesses_left)
+  end
+
+  def load_game_file
+    files = show_files("games")
+
+    puts "Enter file number to load"
+    show_saved_games(files)
+
+    file = select_file(files, player.input)
+
+    load_json_file(file)
+  end
+
+  def select_file(files, input)
+    files[input.to_i]
+  end
+
+  def show_files(location)
+    Dir.glob("#{location}/*")
+  end
+
+  def show_saved_games(files)
+    files.each_with_index do |file, index|
+      show_saved_game(file, index)
+    end
+  end
+
+  def show_saved_game(file, index)
+    saved_data = load_json_file(file)
+    word = saved_data["word_guess"].join(" ")
+    puts "#{index} --> #{word}"
   end
 
   def subtract_guesses
